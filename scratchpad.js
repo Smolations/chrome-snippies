@@ -43,8 +43,16 @@ this.anchor = new MetaElement({
   // selector suffixes
   text: 'Save Ramps',
   role: 'textbox',
+  role: ['textbox', { options }],
   altText: 'foo',
 });
+
+
+this.el = new MetaElement(
+  { text: ['Save Ramps', options] },
+  { metaElementOpts },
+    // container: { role: ['list', options] }
+);
 
 
 // custom action?
@@ -66,8 +74,19 @@ this.someElement.query()
 await this.someElement.find()
 await this.someElement.findAll()
 await this.someElement.waitFor()
+  // OR
+  await this.someElement.waitForGet()
 
 // how to know when to use byText, byRole, etc
+
+// get* throws
+// query* returns null/[]
+// find* returns promise that rejects on error
+
+// kent's tips:
+// - expectations for inDocument; get* will throw without expectation,
+//   but should be put in one regardless
+// - always query from `screen`
 
 
 
@@ -175,3 +194,45 @@ myPage.doAThing();
 74: "waitForElementToBeRemoved"
 75: "within"
 76: "wrapAllByQueryWithSuggestion"
+
+
+// roles
+// https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles
+//
+// alert
+// application
+// timer
+// article
+// banner
+// button
+// cell
+// checkbox
+// comment
+// complementary
+// contentinfo
+// dialog
+// document
+// feed
+// figure
+// form
+// grid
+// gridcell
+// heading
+// list
+// listbox
+// listitem
+// main
+// mark
+// meter
+// navigation
+// region
+// img
+// row
+// rowgroup
+// search
+// suggestion
+// switch
+// tab
+// table
+// tabpanel
+// textbox

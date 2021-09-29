@@ -1,23 +1,13 @@
 class Page {
   static assets = {
-    faked: new Asset('https://cdn.jsdelivr.net/npm/faker/dist/faker.min.jsup'),
     faker: new Asset('https://cdn.jsdelivr.net/npm/faker/dist/faker.min.js'),
     lo: new Asset('https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js'),
     dtl: new Asset('https://unpkg.com/@testing-library/dom/dist/@testing-library/dom.umd.min.js', () => {
-      // this.DTL = window.TestingLibraryDom;
-      // this.fireEvent = this.DTL.fireEvent;
-      // this.screen = this.DTL.screen; // conflicts with window.screen
-
       window.DTL = window.TestingLibraryDom;
-      // window.fireEvent = this.DTL.fireEvent;
-      // window.waitFor = this.DTL.waitFor;
-      // window.within = this.DTL.within;
     }),
     jestDom: new Asset('https://unpkg.com/@testing-library/jest-dom/dist/index.js'),
     jestLite: new Asset('https://unpkg.com/jest-lite@1.0.0-alpha.4/dist/core.js', () => {
-      const {
-        core: { describe, it, expect },
-      } = window.jestLite;
+      const { core: { describe, it, expect } } = window.jestLite;
 
       // we're just messin with snippets, after all. don't judge!
       window.describe = describe;

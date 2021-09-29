@@ -10,56 +10,36 @@
 // - maybe use proxy for element.waitFor, etc (may eliminate need for global objects!!)
 //   - maybe also used proxy to auto-pass above to functions if above doesn't work
 
+
+
 const proxyHandler = {
-  get: function (target, prop, receiver) {
-    if (prop === "message2") {
-      return "world";
-    }
-    return Reflect.get(...arguments);
-  },
-  get: function(obj, prop) {
-    return prop in obj ?
-      obj[prop] :
-      37;
-  },
-  set: function(obj, prop, value) {
-    if (prop === 'age') {
-      if (!Number.isInteger(value)) {
-        throw new TypeError('The age is not an integer');
-      }
-      if (value > 200) {
-        throw new RangeError('The age seems invalid');
-      }
-    }
-
-    // The default behavior to store the value
-    obj[prop] = value;
-
-    // Indicate success
-    return true;
-  },
-
-
-  get(target, prop, receiver) {
+  get(instance, prop, proxy) {
     console.groupCollapsed('Queryable proxyHandler get()');
-    console.log('target: %o', target);
+    console.log('instance: %o', instance);
     console.log('prop: %o', prop);
-    console.log('receiver: %o', receiver);
+    console.log('proxy: %o', proxy);
+
+    let retVal;
 
     // local first?
-    let retVal = target[prop];
+    if (prop in instance) {
+      retVal = instance[prop];
 
-    // DTL
-    if (prop in DTL) {
+    // DTL queries (me.find() => DTL.findBy{Suffix}(screen|container, textMatch, matchOpts))
+    } else if (prop in DTL) {
+      retVal = DTL[prop];
+
+    // DTL (rest)
+    } else if (prop in DTL) {
       retVal = DTL[prop];
 
     // fireEvent
     } else if (prop in DTL.fireEvent) {
       retVal = DTL.fireEvent[prop];
 
-    // DOM
-    } else if (prop in this.element) {
-      retVal = this.element[prop];
+    // DOM?
+    } else if (prop in instance.element) {
+      retVal = instance.element[prop];
     }
 
     console.log('retVal: %o', retVal);
@@ -68,8 +48,76 @@ const proxyHandler = {
   },
 };
 
+
+// assign instance getters based on this?
 class MetaElement {
-  constructor() {
+  static parseArgs(specObj) {
+    const parsed = {};
+    const {
+      ...query
+    } = specObj;
+
+    const [[querySuffix, queryArgs]] = [...Object.entries(query)];
+    const opts = Array.isArray(queryArgs) ? queryArgs : [queryArgs];
+    const [textMatch, matchOpts] = opts;
+
+    parsed.suffix = querySuffix.replace(/^\w/, (c) => c.toUpperCase());
+    parsed.textMatch = textMatch;
+    parsed.matchOpts = matchOpts;
+
+    return parsed;
+  }
+
+  // rename?
+  #meta = {};
+
+
+  constructor(queryObj, options = {}) {
+    const { container } = options;
+    const querySource = container ? DTL : DTL.screen;
+
+    // defaults overridden by method call
+    this.#meta = {
+      suffix: '', // PascalCase of constructor object key (e.g. 'Text' for findByText)
+      textMatch: null, // string/regex/fn
+      matchOpts: {},
+
+      element: null, // raw dom element?
+
+      ...this.constructor.parseArgs(queryObj)
+    };
+
+    // can container reference also be a MetaElement?
+
+    // 1. no container
+    //    - screen.getBy*(textMatch, matchOpts)
+    // 2. with container
+    //    - DTL.getBy*(container, textMatch, matchOpts)
+
+
+    // set up query aliases
+    [
+      'query', 'queryAll',
+      'get', 'getAll',
+      'find', 'findAll',
+    ].forEach((alias) => {
+      const aliasFnName = `${alias}By${this.#meta.suffix}`;
+      const fnArgs = [this.#meta.textMatch, this.#meta.matchOpts];
+
+      container && fnArgs.unshift(container);
+
+      Object.defineProperty(this, alias, {
+        // get() {
+        //   return container
+        //     ? querySource[aliasFnName](container, this.#meta.textMatch, this.#meta.matchOptions)
+        //     : querySource[aliasFnName](this.#meta.textMatch, this.#meta.matchOptions);
+        // },
+        get() {
+          return () => querySource[aliasFnName](...fnArgs);
+        },
+      });
+    });
+
     return new Proxy(this, proxyHandler);
   }
 }
