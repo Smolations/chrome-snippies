@@ -1,3 +1,6 @@
+
+
+
 const pageProxyHandler = {
   get: function (target, prop, receiver) {
     if (prop === "message2") {

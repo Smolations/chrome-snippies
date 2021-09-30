@@ -19,27 +19,28 @@ const proxyHandler = {
     console.log('prop: %o', prop);
     console.log('proxy: %o', proxy);
 
+    const element = instance.query() || {};
     let retVal;
 
     // local first?
     if (prop in instance) {
+      console.debug('-> local');
       retVal = instance[prop];
-
-    // DTL queries (me.find() => DTL.findBy{Suffix}(screen|container, textMatch, matchOpts))
-    } else if (prop in DTL) {
-      retVal = DTL[prop];
-
-    // DTL (rest)
-    } else if (prop in DTL) {
-      retVal = DTL[prop];
 
     // fireEvent
     } else if (prop in DTL.fireEvent) {
-      retVal = DTL.fireEvent[prop];
+      console.debug('-> fireEvent');
+      retVal = () => DTL.fireEvent[prop](instance.query());
+
+    // DTL
+    } else if (prop in DTL) {
+      console.debug('-> DTL');
+      retVal = DTL[prop];
 
     // DOM?
-    } else if (prop in instance.element) {
-      retVal = instance.element[prop];
+    } else if (prop in element) {
+      console.debug('-> DTL');
+      retVal = element[prop];
     }
 
     console.log('retVal: %o', retVal);
@@ -81,19 +82,8 @@ class MetaElement {
       suffix: '', // PascalCase of constructor object key (e.g. 'Text' for findByText)
       textMatch: null, // string/regex/fn
       matchOpts: {},
-
-      element: null, // raw dom element?
-
       ...this.constructor.parseArgs(queryObj)
     };
-
-    // can container reference also be a MetaElement?
-
-    // 1. no container
-    //    - screen.getBy*(textMatch, matchOpts)
-    // 2. with container
-    //    - DTL.getBy*(container, textMatch, matchOpts)
-
 
     // set up query aliases
     [
@@ -107,17 +97,30 @@ class MetaElement {
       container && fnArgs.unshift(container);
 
       Object.defineProperty(this, alias, {
-        // get() {
-        //   return container
-        //     ? querySource[aliasFnName](container, this.#meta.textMatch, this.#meta.matchOptions)
-        //     : querySource[aliasFnName](this.#meta.textMatch, this.#meta.matchOptions);
-        // },
         get() {
           return () => querySource[aliasFnName](...fnArgs);
         },
       });
     });
 
+    for (let [event, fn] of Object.entries(DTL.fireEvent)) {
+      Object.defineProperty(this, event, {
+        get() {
+          return (evtOpts = {}) => {
+            // why isn't this working?!
+            console.log('fireEvent[%o](%o, %o)', event, this.query(), evtOpts);
+            return DTL.fireEvent[event](this.query(), evtOpts);
+          };
+        },
+      });
+    }
+
     return new Proxy(this, proxyHandler);
+  }
+
+
+  type(text) {
+    const element = this.query();
+    this.change(element, { target: { value: String(text) }});
   }
 }
